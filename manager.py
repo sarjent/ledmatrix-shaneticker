@@ -420,7 +420,8 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 'logo_league': 'nfl',
                 'logo_dir': 'assets/sports/nfl_logos',
                 'favorite_teams': nfl_teams,
-                'enabled': nfl_enabled
+                'enabled': nfl_enabled,
+                'today_only': plugin_leagues.get('nfl', {}).get('today_only', False)
             },
             'nba': {
                 'sport': 'basketball',
@@ -428,7 +429,8 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 'logo_league': 'nba',
                 'logo_dir': 'assets/sports/nba_logos',
                 'favorite_teams': nba_teams,
-                'enabled': nba_enabled
+                'enabled': nba_enabled,
+                'today_only': plugin_leagues.get('nba', {}).get('today_only', False)
             },
             'mlb': {
                 'sport': 'baseball',
@@ -436,7 +438,8 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 'logo_league': 'mlb',
                 'logo_dir': 'assets/sports/mlb_logos',
                 'favorite_teams': mlb_teams,
-                'enabled': mlb_enabled
+                'enabled': mlb_enabled,
+                'today_only': plugin_leagues.get('mlb', {}).get('today_only', False)
             },
             'ncaa_fb': {
                 'sport': 'football',
@@ -444,7 +447,8 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 'logo_league': 'ncaa_fb',
                 'logo_dir': 'assets/sports/ncaa_logos',
                 'favorite_teams': ncaa_fb_teams,
-                'enabled': ncaa_fb_enabled
+                'enabled': ncaa_fb_enabled,
+                'today_only': plugin_leagues.get('ncaa_fb', {}).get('today_only', False)
             },
             'milb': {
                 'sport': 'baseball',
@@ -452,7 +456,8 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 'logo_league': 'milb',
                 'logo_dir': 'assets/sports/milb_logos',
                 'favorite_teams': milb_teams,
-                'enabled': milb_enabled
+                'enabled': milb_enabled,
+                'today_only': plugin_leagues.get('milb', {}).get('today_only', False)
             },
             'nhl': {
                 'sport': 'hockey',
@@ -460,7 +465,8 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 'logo_league': 'nhl',
                 'logo_dir': 'assets/sports/nhl_logos',
                 'favorite_teams': nhl_teams,
-                'enabled': nhl_enabled
+                'enabled': nhl_enabled,
+                'today_only': plugin_leagues.get('nhl', {}).get('today_only', False)
             },
             'ncaam_basketball': {
                 'sport': 'basketball',
@@ -468,7 +474,8 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 'logo_league': 'ncaam_basketball',
                 'logo_dir': 'assets/sports/ncaa_logos',
                 'favorite_teams': ncaam_teams,
-                'enabled': ncaam_enabled
+                'enabled': ncaam_enabled,
+                'today_only': plugin_leagues.get('ncaam_basketball', {}).get('today_only', False)
             },
             'ncaa_baseball': {
                 'sport': 'baseball',
@@ -476,7 +483,8 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 'logo_league': 'ncaa_baseball',
                 'logo_dir': 'assets/sports/ncaa_logos',
                 'favorite_teams': ncaa_baseball_teams,
-                'enabled': ncaa_baseball_enabled
+                'enabled': ncaa_baseball_enabled,
+                'today_only': plugin_leagues.get('ncaa_baseball', {}).get('today_only', False)
             },
             'soccer': {
                 'sport': 'soccer',
@@ -484,7 +492,8 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 'logo_league': None,
                 'logo_dir': 'assets/sports/soccer_logos',
                 'favorite_teams': soccer_settings['favorite_teams'],
-                'enabled': soccer_settings['enabled']
+                'enabled': soccer_settings['enabled'],
+                'today_only': plugin_leagues.get('soccer', {}).get('today_only', False)
             }
         }
 
@@ -1038,10 +1047,15 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
     def _fetch_league_games(self, league_config: Dict[str, Any], now: datetime, canonical_league_key: str) -> List[Dict[str, Any]]:
         """Fetch upcoming games for a specific league using day-by-day approach."""
         games = []
-        yesterday = now - timedelta(days=1)
-        future_window = now + timedelta(days=self.future_fetch_days)
-        num_days = (future_window - yesterday).days + 1
-        dates = [(yesterday + timedelta(days=i)).strftime("%Y%m%d") for i in range(num_days)]
+        today_only = league_config.get('today_only', False)
+        if today_only:
+            dates = [now.strftime("%Y%m%d")]
+            future_window = now + timedelta(days=1)
+        else:
+            yesterday = now - timedelta(days=1)
+            future_window = now + timedelta(days=self.future_fetch_days)
+            num_days = (future_window - yesterday).days + 1
+            dates = [(yesterday + timedelta(days=i)).strftime("%Y%m%d") for i in range(num_days)]
 
         # Optimization: If showing favorite teams only, track games found per team
         favorite_teams = league_config.get('favorite_teams', []) if self.show_favorite_teams_only else []

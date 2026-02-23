@@ -251,6 +251,11 @@
                   "WSH": "Washington Commanders"
                 }
               }
+            },
+            "today_only": {
+              "type": "boolean",
+              "default": false,
+              "description": "Only show NFL games scheduled for today"
             }
           },
           "additionalProperties": false
@@ -315,6 +320,11 @@
                   "WAS": "Washington Wizards"
                 }
               }
+            },
+            "today_only": {
+              "type": "boolean",
+              "default": false,
+              "description": "Only show NBA games scheduled for today"
             }
           },
           "additionalProperties": false
@@ -379,6 +389,11 @@
                   "WSH": "Washington Nationals"
                 }
               }
+            },
+            "today_only": {
+              "type": "boolean",
+              "default": false,
+              "description": "Only show MLB games scheduled for today"
             }
           },
           "additionalProperties": false
@@ -444,6 +459,11 @@
                   "WPG": "Winnipeg Jets"
                 }
               }
+            },
+            "today_only": {
+              "type": "boolean",
+              "default": false,
+              "description": "Only show NHL games scheduled for today"
             }
           },
           "additionalProperties": false
@@ -469,6 +489,11 @@
               },
               "uniqueItems": true,
               "maxItems": 120
+            },
+            "today_only": {
+              "type": "boolean",
+              "default": false,
+              "description": "Only show MiLB games scheduled for today"
             }
           },
           "additionalProperties": false
@@ -494,6 +519,11 @@
               },
               "uniqueItems": true,
               "maxItems": 130
+            },
+            "today_only": {
+              "type": "boolean",
+              "default": false,
+              "description": "Only show NCAA Football games scheduled for today"
             }
           },
           "additionalProperties": false
@@ -524,6 +554,11 @@
               "type": "boolean",
               "default": true,
               "description": "Show tournament seeds next to team names during March Madness (e.g., (5) DUKE)"
+            },
+            "today_only": {
+              "type": "boolean",
+              "default": false,
+              "description": "Only show NCAA Men's Basketball games scheduled for today"
             }
           },
           "additionalProperties": false
@@ -549,6 +584,11 @@
               },
               "uniqueItems": true,
               "maxItems": 300
+            },
+            "today_only": {
+              "type": "boolean",
+              "default": false,
+              "description": "Only show NCAA Baseball games scheduled for today"
             }
           },
           "additionalProperties": false

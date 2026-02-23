@@ -8,6 +8,9 @@ A plugin for LEDMatrix that displays scrolling odds and betting lines for upcomi
 
 ## Changelog
 
+### 1.3.0 (2026-02-23)
+- **Feature:** Added per-league `today_only` boolean option. When `true`, only games scheduled for the current calendar day are fetched and displayed for that league, instead of the full `future_fetch_days` lookahead window. Useful for high-volume leagues (NCAA basketball, MLB) where you only want today's slate.
+
 ### 1.2.0 (2026-02-23)
 - **Fix:** Live games going live during the 1-hour update window were not detected until the next full hourly refresh, causing the ticker to continue showing pre-game odds instead of live scores for up to 55 minutes. A lightweight scoreboard probe now runs every 5 minutes (rate-limited, no display impact) so newly-live games are detected and the refresh rate switches to 60 s within a single probe cycle.
 - **Fix:** Live-odds cache keys (`odds_espn_..._live`) were misclassified as `sports_live` (30 s TTL) instead of `odds_live` (120 s TTL) due to the generic `'live'` keyword check running before the `'odds'` check in `cache_strategy.py`. This caused the ESPN odds API to be hit every 30 s per game, frequently triggering the 3-second per-request timeout. *(Fix applied to LEDMatrix core: `src/cache/cache_strategy.py`.)*
