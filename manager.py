@@ -1001,7 +1001,8 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                     # Show all games, optionally only those with odds
                     league_games = all_games
                     if self.show_odds_only:
-                        league_games = [g for g in league_games if g.get('odds') and not g.get('odds', {}).get('no_odds', False)]
+                        # Always include live games regardless of odds availability (live games lose their lines)
+                        league_games = [g for g in league_games if g.get('status_state') == 'in' or (g.get('odds') and not g.get('odds', {}).get('no_odds', False))]
                     # Sort by start_time
                     league_games.sort(key=lambda x: x.get('start_time', datetime.max))
                     league_games = league_games[:self.max_games_per_league]
@@ -1372,9 +1373,9 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
             competitions = event['competitions'][0]
             competitors = competitions['competitors']
             
-            # Get scores
-            home_score = next(c['score'] for c in competitors if c['homeAway'] == 'home')
-            away_score = next(c['score'] for c in competitors if c['homeAway'] == 'away')
+            # Get scores (use .get() with defaults so a missing 'score' key doesn't abort extraction)
+            home_score = next((c.get('score', '0') for c in competitors if c.get('homeAway') == 'home'), '0')
+            away_score = next((c.get('score', '0') for c in competitors if c.get('homeAway') == 'away'), '0')
             
             live_info = {
                 'home_score': home_score,
