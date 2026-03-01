@@ -77,23 +77,25 @@ except ImportError:
             return None
 
 # Import background service and dynamic resolver
+_CORE_IMPORTS_AVAILABLE = False
 try:
     from src.background_data_service import get_background_service
     from src.dynamic_team_resolver import DynamicTeamResolver
     from src.logo_downloader import download_missing_logo
     from src.common.scroll_helper import ScrollHelper
+    _CORE_IMPORTS_AVAILABLE = True
 except ImportError:
-    # Fallback implementations
+    # Fallback implementations (plugin will have limited functionality)
     def get_background_service(cache_manager, max_workers=1):
         return None
-    
+
     class DynamicTeamResolver:
         def resolve_teams(self, teams, league):
             return teams
-    
+
     def download_missing_logo(league, team_id, team_abbr, logo_path, logo_url):
         return False
-    
+
     class ScrollHelper:
         pass  # Will be handled by proper import
 
@@ -165,8 +167,8 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
         self.project_root = Path(__file__).resolve().parent.parent.parent
         
         # Check required dependencies
-        if get_background_service is None or DynamicTeamResolver is None:
-            self.logger.error("Failed to import required services. Plugin will not function.")
+        if not _CORE_IMPORTS_AVAILABLE:
+            self.logger.error("Failed to import required LEDMatrix core services. Plugin will not function.")
             self.initialized = False
             return
 
@@ -316,10 +318,13 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
         self.scroll_helper = ScrollHelper(display_width, display_height, logger=self.logger)
         
         # Configure ScrollHelper with plugin settings
-        # Check if we should use frame-based scrolling (new format) or time-based (old format)
-        use_frame_based = (self.scroll_pixels_per_second is None and 
-                          display_config and 
-                          ('scroll_speed' in display_config or 'scroll_delay' in display_config))
+        # Check if we should use frame-based scrolling (new format) or time-based (old format).
+        # Check display_options first (current format), then display_config (old format).
+        _has_frame_config = (
+            (display_options and ('scroll_speed' in display_options or 'scroll_delay' in display_options)) or
+            (display_config and ('scroll_speed' in display_config or 'scroll_delay' in display_config))
+        )
+        use_frame_based = self.scroll_pixels_per_second is None and _has_frame_config
         
         if use_frame_based:
             # New format: use frame-based scrolling for finer control
@@ -1846,7 +1851,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
             if local_time:
                 # Capitalize full day name, e.g., 'Tuesday'
                 day_text = local_time.strftime("%A")
-                date_text = local_time.strftime("%-m/%d")
+                date_text = f"{local_time.month}/{local_time.day:02d}"
                 time_text = local_time.strftime("%I:%M%p").lstrip('0')
             else:
                 # Fallback if time parsing failed
@@ -2030,7 +2035,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
         
         # For baseball live games, optimize width for graphical bases
         is_baseball_live = False
-        if is_live and live_info and hasattr(self, '_bases_data'):
+        if is_live and live_info and self._bases_data is not None:
             sport = None
             league_key = game.get('league')
             if league_key and league_key in self.league_configs:
@@ -2130,7 +2135,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 self._draw_base_indicators(draw, self._bases_data, bases_x, bases_y)
             
             # Clear the bases data after drawing
-            delattr(self, '_bases_data')
+            self._bases_data = None
         else:
             # Draw regular odds text for non-baseball games
             draw.text((current_x, odds_y_away), away_odds_text, font=odds_font, fill=odds_color)
@@ -2597,7 +2602,12 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
         # Dynamically determine update interval based on live games
         current_interval = self._get_current_update_interval()
         if current_time - self.last_update < current_interval:
-            logger.debug(f"Odds ticker update interval not reached. Next update in {current_interval - (current_time - self.last_update)} seconds (interval: {current_interval}s, live games: {self._has_live_games()})")
+            logger.debug(
+                "Odds ticker update interval not reached. Next update in %.1fs (interval: %ds, live: %s)",
+                current_interval - (current_time - self.last_update),
+                current_interval,
+                self._live_probe_result,
+            )
             return
 
         # Use lock to prevent concurrent modifications during live updates
