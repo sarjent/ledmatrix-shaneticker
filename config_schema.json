@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Odds Ticker Plugin Configuration",
-  "description": "Configuration schema for the Odds Ticker plugin - displays betting odds for NFL, NBA, MLB, NHL, MiLB, and NCAA sports",
+  "title": "Shane Ticker Plugin Configuration",
+  "description": "Configuration schema for the Shane Ticker plugin - displays betting odds for NFL, NBA, MLB, NHL, MiLB, and NCAA sports",
   "type": "object",
   "properties": {
     "enabled": {
       "type": "boolean",
       "default": false,
-      "description": "Enable or disable the odds ticker plugin"
+      "description": "Enable or disable the Shane Ticker plugin"
     },
     "display_options": {
       "type": "object",
@@ -20,7 +20,7 @@
           "default": 30,
           "minimum": 10,
           "maximum": 300,
-          "description": "Duration in seconds to display the odds ticker (used when dynamic_duration is disabled)"
+          "description": "Duration in seconds to display the Shane Ticker (used when dynamic_duration is disabled)"
         },
         "dynamic_duration": {
           "type": "boolean",
@@ -599,7 +599,7 @@
     "customization": {
       "type": "object",
       "title": "Display Customization",
-      "description": "Customize fonts for odds ticker display elements",
+      "description": "Customize fonts for Shane Ticker display elements",
       "x-collapsed": true,
       "properties": {
         "team_text": {

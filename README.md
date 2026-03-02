@@ -1,10 +1,8 @@
-# Odds Ticker Plugin (sarjent fork)
+# Shane Ticker
 
-A plugin for LEDMatrix that displays scrolling odds and betting lines for upcoming games across multiple sports leagues including NFL, NBA, MLB, NCAA Football, and NCAA Basketball.
+A LEDMatrix plugin that displays scrolling odds, betting lines, and live scores for upcoming games across multiple sports leagues including NFL, NBA, MLB, NCAA Football, and NCAA Basketball.
 
-> **Fork of [ChuckBuilds/ledmatrix-plugins](https://github.com/ChuckBuilds/ledmatrix-plugins) — `plugins/odds-ticker`**
-> This fork applies bug fixes for live game detection and cache classification.
-> Upstream version: 1.1.0 | This version: 1.2.0
+> Originally forked from [ChuckBuilds/ledmatrix-plugins](https://github.com/ChuckBuilds/ledmatrix-plugins) `plugins/odds-ticker` (v1.1.0). Substantially rewritten with live game support, bug fixes, and additional sports.
 
 ## Changelog
 

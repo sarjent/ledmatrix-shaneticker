@@ -1,11 +1,8 @@
 """
-Odds Ticker Plugin for LEDMatrix
+Shane Ticker Plugin for LEDMatrix
 
 Displays scrolling odds and betting lines for upcoming games across multiple sports leagues.
 Shows point spreads, money lines, and over/under totals with team information.
-
-This plugin perfectly mirrors the original odds_ticker_manager.py functionality
-with all the fine-tuned drawing, layout, logic, filtering, data, fonts, colors, and logos.
 
 Features:
 - Multi-sport odds display (NFL, NBA, MLB, NCAA Football, NCAA Basketball, NHL, MiLB, NCAA Baseball, NCAA Basketball)
@@ -103,8 +100,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class OddsTickerPlugin(BasePlugin, BaseOddsManager):
-    """Manager for displaying scrolling odds ticker for multiple sports leagues."""
+class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
+    """Shane Ticker — scrolling sports odds and live score display for multiple sports leagues."""
     
     BROADCAST_LOGO_MAP = {
         "ACC Network": "accn",
@@ -156,7 +153,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
     
     def __init__(self, plugin_id: str, config: Dict[str, Any],
                  display_manager, cache_manager, plugin_manager):
-        """Initialize the odds ticker plugin with exact original functionality."""
+        """Initialize the Shane Ticker plugin with exact original functionality."""
         # Initialize BasePlugin first
         super().__init__(plugin_id, config, display_manager, cache_manager, plugin_manager)
         
@@ -173,24 +170,24 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
             return
 
         # Configuration - exactly like original
-        # The config parameter already contains the odds-ticker configuration directly
-        self.odds_ticker_config = config
-        self.is_enabled = self.odds_ticker_config.get('enabled', False)
+        # The config parameter already contains the shaneticker configuration directly
+        self.plugin_config = config
+        self.is_enabled = self.plugin_config.get('enabled', False)
 
         # Debug logging
         self.logger.info(f"Full config received: {config}")
-        self.logger.info(f"Odds ticker configuration: {self.odds_ticker_config}")
+        self.logger.info(f"Odds ticker configuration: {self.plugin_config}")
         self.logger.info(f"Odds ticker enabled: {self.is_enabled}")
 
         # Get nested config sections (support both old flat and new nested structure)
-        display_options = self.odds_ticker_config.get('display_options', {})
-        data_settings = self.odds_ticker_config.get('data_settings', {})
-        filtering = self.odds_ticker_config.get('filtering', {})
-        leagues_config = self.odds_ticker_config.get('leagues', {})
+        display_options = self.plugin_config.get('display_options', {})
+        data_settings = self.plugin_config.get('data_settings', {})
+        filtering = self.plugin_config.get('filtering', {})
+        leagues_config = self.plugin_config.get('leagues', {})
 
         # Use instance method for config value retrieval
         def get_config(section, key, default, old_key=None):
-            return self._get_config_value(section, key, default, self.odds_ticker_config, old_key)
+            return self._get_config_value(section, key, default, self.plugin_config, old_key)
 
         # Filtering settings
         self.show_favorite_teams_only = get_config(filtering, 'show_favorite_teams_only', False)
@@ -217,7 +214,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 if leagues_config.get(league_key, {}).get('enabled', False)
             ]
         else:
-            self.enabled_leagues = self.odds_ticker_config.get('enabled_leagues', [])
+            self.enabled_leagues = self.plugin_config.get('enabled_leagues', [])
 
         # Display options
         self.display_duration = get_config(display_options, 'display_duration', 30)
@@ -233,7 +230,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
         #   2. display.scroll_speed/delay (DEPRECATED - old nested format)
         #   3. scroll_pixels_per_second (DEPRECATED - flat format)
         #   4. scroll_speed/delay at root level (LEGACY - flat format)
-        display_config = self.odds_ticker_config.get('display', {})
+        display_config = self.plugin_config.get('display', {})
         if display_options and ('scroll_speed' in display_options or 'scroll_delay' in display_options):
             # Priority 1: Current format - use display_options object
             self.scroll_speed = display_options.get('scroll_speed', 1.0)
@@ -248,9 +245,9 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
             self.logger.info(f"Using display.scroll_speed={self.scroll_speed} px/frame, display.scroll_delay={self.scroll_delay}s (frame-based mode)")
         else:
             # Legacy flat format: use scroll_pixels_per_second (backward compatibility)
-            self.scroll_pixels_per_second = self.odds_ticker_config.get('scroll_pixels_per_second')
-            self.scroll_speed = self.odds_ticker_config.get('scroll_speed', 2)
-            self.scroll_delay = self.odds_ticker_config.get('scroll_delay', 0.05)
+            self.scroll_pixels_per_second = self.plugin_config.get('scroll_pixels_per_second')
+            self.scroll_speed = self.plugin_config.get('scroll_speed', 2)
+            self.scroll_delay = self.plugin_config.get('scroll_delay', 0.05)
             if self.scroll_pixels_per_second is not None:
                 self.logger.info(f"Using scroll_pixels_per_second={self.scroll_pixels_per_second} px/s (time-based mode, backward compatibility)")
             else:
@@ -376,7 +373,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 self.logger.warning(f"Could not load main config for league settings: {e}")
 
         # Plugin's own leagues config from config_schema.json
-        plugin_leagues = self.odds_ticker_config.get('leagues', {})
+        plugin_leagues = self.plugin_config.get('leagues', {})
 
         # Helper to get league settings - prefer plugin config, fall back to main config scoreboard
         def get_league_settings(league_key: str, scoreboard_key: str) -> tuple:
@@ -527,7 +524,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
             if league_cfg.get('enabled', False)
         ]
 
-        logger.info(f"OddsTickerManager initialized with enabled leagues: {self.enabled_leagues}")
+        logger.info(f"ShaneTickerManager initialized with enabled leagues: {self.enabled_leagues}")
         logger.info(f"Show favorite teams only: {self.show_favorite_teams_only}")
         self.initialized = True
 
@@ -912,7 +909,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
         now = datetime.now(timezone.utc)
         
         if not self.enabled_leagues:
-            logger.warning("No enabled leagues configured for odds ticker")
+            logger.warning("No enabled leagues configured for Shane Ticker")
             return games_data
         
         logger.info(f"Fetching upcoming games for {len(self.enabled_leagues)} enabled leagues: {self.enabled_leagues}")
@@ -1511,7 +1508,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 
             elif sport == 'football':
                 quarter_text = f"Q{live_info.get('quarter', 1)}"
-                # Validate down and distance for odds ticker display
+                # Validate down and distance for Shane Ticker display
                 down = live_info.get('down')
                 distance = live_info.get('distance')
                 if (down is not None and isinstance(down, int) and 1 <= down <= 4 and 
@@ -1798,7 +1795,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
             elif sport == 'football':
                 # Football: Show quarter and down/distance
                 quarter_text = f"Q{live_info.get('quarter', 1)}"
-                # Validate down and distance for odds ticker display
+                # Validate down and distance for Shane Ticker display
                 down = live_info.get('down')
                 distance = live_info.get('distance')
                 if (down is not None and isinstance(down, int) and 1 <= down <= 4 and 
@@ -2287,7 +2284,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                         self._create_ticker_image()
                         logger.debug(f"Force update completed, total_scroll_width: {self.total_scroll_width}px")
                 except Exception as e:
-                    logger.exception(f"Error updating odds ticker for dynamic duration: {e}")
+                    logger.exception(f"Error updating Shane Ticker for dynamic duration: {e}")
 
         # Cache the duration
         self._cached_dynamic_duration = self.dynamic_duration
@@ -2360,7 +2357,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
         # Update the plugin's config reference
         old_config = self.config.copy() if self.config else {}
         self.config = new_config
-        self.odds_ticker_config = new_config
+        self.plugin_config = new_config
 
         # Get nested config sections (support both old flat and new nested structure)
         display_options = new_config.get('display_options', {})
@@ -2382,7 +2379,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
 
         if old_enabled != new_enabled:
             self.logger.info(
-                "Dynamic duration %s for odds-ticker plugin",
+                "Dynamic duration %s for shaneticker plugin",
                 "enabled" if new_enabled else "disabled"
             )
 
@@ -2459,7 +2456,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
             self.logger.info(f"Show channel logos updated to: {self.show_channel_logos}")
 
     def update(self):
-        """Update odds ticker data."""
+        """Update Shane Ticker data."""
         logger.debug("Entering update method")
         if not self.is_enabled:
             logger.debug("Odds ticker is disabled, skipping update")
@@ -2599,12 +2596,12 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
         with self._update_lock:
             try:
                 # Reload config settings that can change at runtime (support both old and new config structure)
-                filtering = self.odds_ticker_config.get('filtering', {})
-                display_options = self.odds_ticker_config.get('display_options', {})
-                self.show_odds_only = filtering.get('show_odds_only', self.odds_ticker_config.get('show_odds_only', False))
-                self.loop = display_options.get('loop', self.odds_ticker_config.get('loop', True))
+                filtering = self.plugin_config.get('filtering', {})
+                display_options = self.plugin_config.get('display_options', {})
+                self.show_odds_only = filtering.get('show_odds_only', self.plugin_config.get('show_odds_only', False))
+                self.loop = display_options.get('loop', self.plugin_config.get('loop', True))
 
-                logger.debug("Updating odds ticker data")
+                logger.debug("Updating Shane Ticker data")
                 logger.debug(f"Enabled leagues: {self.enabled_leagues}")
                 logger.debug(f"Show favorite teams only: {self.show_favorite_teams_only}")
                 logger.debug(f"Show odds only: {self.show_odds_only}")
@@ -2640,19 +2637,19 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
                 next_interval = self._get_current_update_interval()
                 if self.games_data:
                     live_count = sum(1 for game in self.games_data if game.get('status_state') == 'in')
-                    logger.info(f"Updated odds ticker with {len(self.games_data)} games ({live_count} live). Next update in {next_interval}s")
+                    logger.info(f"Updated Shane Ticker with {len(self.games_data)} games ({live_count} live). Next update in {next_interval}s")
                     for i, game in enumerate(self.games_data[:3]):  # Log first 3 games
                         status = "LIVE" if game.get('status_state') == 'in' else game.get('status', 'scheduled')
                         logger.info(f"Game {i+1}: {game['away_team']} @ {game['home_team']} - {status}")
                 else:
-                    logger.warning("No games found for odds ticker")
+                    logger.warning("No games found for Shane Ticker")
 
             except Exception as e:
-                logger.error(f"Error updating odds ticker: {e}", exc_info=True)
+                logger.error(f"Error updating Shane Ticker: {e}", exc_info=True)
                 logger.warning(f"Odds ticker update failed, games_data may be empty: {e}")
 
     def display(self, display_mode: str = None, force_clear: bool = False):
-        """Display the odds ticker."""
+        """Display the Shane Ticker."""
         logger.debug("Entering display method")
         logger.debug(f"Odds ticker enabled: {self.is_enabled}")
         logger.debug(f"Current scroll position: {self.scroll_helper.scroll_position}")
@@ -2825,7 +2822,7 @@ class OddsTickerPlugin(BasePlugin, BaseOddsManager):
             self.scroll_helper.log_frame_rate()
             
         except Exception as e:
-            logger.error(f"Error displaying odds ticker: {e}", exc_info=True)
+            logger.error(f"Error displaying Shane Ticker: {e}", exc_info=True)
             self._display_fallback_message()
 
     def _display_fallback_message(self):
