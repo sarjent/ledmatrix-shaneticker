@@ -2470,13 +2470,22 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
             logger.debug("Odds ticker is disabled, skipping update")
             return
             
-        # Check if we're currently scrolling and defer the update if so
+        # When live games are active and the update interval has elapsed, bypass
+        # the scroll deferral so scores refresh even in Vegas mode (where
+        # is_currently_scrolling() is always True and deferred updates never run).
+        current_time = time.time()
+        current_interval = self._get_current_update_interval()
+        live_update_due = current_time - self.last_update >= current_interval
+
         if hasattr(self.display_manager, 'is_currently_scrolling') and self.display_manager.is_currently_scrolling():
-            logger.debug("Odds ticker is currently scrolling, deferring update")
-            if hasattr(self.display_manager, 'defer_update'):
-                self.display_manager.defer_update(self._perform_update, priority=1)
+            if live_update_due and self._has_live_games():
+                self._perform_update(preserve_scroll=True)
+            else:
+                logger.debug("Odds ticker is currently scrolling, deferring update")
+                if hasattr(self.display_manager, 'defer_update'):
+                    self.display_manager.defer_update(self._perform_update, priority=1)
             return
-            
+
         self._perform_update()
 
     def _has_live_games(self) -> bool:
