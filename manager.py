@@ -291,7 +291,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
         # Live game probe state — allows _has_live_games() to detect newly-live
         # games between full hourly updates without making an API call on every frame.
         self._live_probe_last_time = 0
-        self._live_probe_interval = 300  # probe at most every 5 minutes
+        self._live_probe_interval = 60   # probe at most every 60s to detect newly-live games quickly
         self._live_probe_result = False  # cached result of last probe
         
         # Get timezone from main config
@@ -1111,7 +1111,15 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
                         else:
                             ttl = 86400 * 30  # 30 days for older dates
                     elif request_date_obj == current_date_obj:
-                        ttl = 300  # 5 minutes for today (shorter to catch live games)
+                        # Use live_game_update_interval when live games are active so scores
+                        # refresh at the same rate as the update loop (default 60s).
+                        # Fall back to 300s when no live games are in progress.
+                        if self._live_probe_result or any(
+                            g.get('status_state') == 'in' for g in self.games_data
+                        ):
+                            ttl = self.live_game_update_interval
+                        else:
+                            ttl = 300  # 5 minutes when no live games
                     else:
                         ttl = 43200  # 12 hours for future dates
                     
