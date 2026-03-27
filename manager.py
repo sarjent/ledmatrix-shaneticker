@@ -503,6 +503,9 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
         ncaam_config = plugin_leagues.get('ncaam_basketball', {})
         self.show_seeds_in_tournament = ncaam_config.get('show_seeds_in_tournament', True)
 
+        # Standings/ranking display below team logos (toggleable for all sports)
+        self.show_standings = get_config(display_options, 'show_standings', True)
+
         # Resolve dynamic teams for each league
         for league_key, league_config in self.league_configs.items():
             if league_config.get('enabled', False):
@@ -1782,11 +1785,6 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
                 sport = self.league_configs[league_key].get('sport')
             
             if sport == 'baseball':
-                # For baseball, we'll use graphical base indicators instead of text
-                # Don't show any text for bases - the graphical display will replace this section
-                away_odds_text = ""
-                home_odds_text = ""
-                
                 # Store bases data for later drawing
                 self._bases_data = live_info.get('bases_occupied', [False, False, False])
                 
@@ -1854,22 +1852,21 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
         else:
             # Show regular date/time for non-live games
             if local_time:
-                # Capitalize full day name, e.g., 'Tuesday'
-                day_text = local_time.strftime("%A")
-                date_text = f"{local_time.month}/{local_time.day:02d}"
-                time_text = local_time.strftime("%I:%M%p").lstrip('0')
+                day_text = local_time.strftime("%b %d").upper()  # e.g. "APR 04"
+                date_text = local_time.strftime("%I:%M%p").lstrip('0').rstrip('M')  # e.g. "6:00P"
+                time_text = ""  # spread occupies 3rd row in non-live layout
             else:
                 # Fallback if time parsing failed
                 day_text = "TBD"
-                date_text = "TBD"
-                time_text = "TBD"
+                date_text = ""
+                time_text = ""
         
-        # Datetime column width
+        # Right column base width (spread/O/U widths added after odds computation below)
         temp_draw = ImageDraw.Draw(Image.new('RGB', (1, 1)))
         day_width = int(temp_draw.textlength(day_text, font=datetime_font))
-        date_width = int(temp_draw.textlength(date_text, font=datetime_font))
-        time_width = int(temp_draw.textlength(time_text, font=datetime_font))
-        datetime_col_width = max(day_width, date_width, time_width)
+        date_width = int(temp_draw.textlength(date_text, font=datetime_font)) if date_text else 0
+        time_width = int(temp_draw.textlength(time_text, font=datetime_font)) if time_text else 0
+        right_col_width = max(day_width, date_width, time_width)
 
         # "vs." text
         vs_text = "vs."
@@ -1908,7 +1905,24 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
         
         away_team_text = f"{away_team_name} ({game.get('away_record', '') or 'N/A'})"
         home_team_text = f"{home_team_name} ({game.get('home_record', '') or 'N/A'})"
-        
+
+        # Standings/ranking text displayed below each team logo (toggleable)
+        away_standing = ""
+        home_standing = ""
+        if self.show_standings:
+            if (league_key in ('ncaam_basketball', 'ncaaw_basketball') and
+                    self.show_seeds_in_tournament and tournament_round):
+                s = game.get('away_seed', 0)
+                away_standing = str(s) if s else ""
+                s = game.get('home_seed', 0)
+                home_standing = str(s) if s else ""
+            elif league_key in ['ncaa_fb', 'ncaam_basketball']:
+                rankings = self._fetch_team_rankings(league_key)  # uses cached result
+                r = rankings.get(away_team_abbr, 0)
+                away_standing = str(r) if r else ""
+                r = rankings.get(home_team_abbr, 0)
+                home_standing = str(r) if r else ""
+
         # For live games, show scores instead of records
         if is_live and live_info:
             away_score = live_info.get('away_score', 0)
@@ -1920,15 +1934,14 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
         home_team_width = int(temp_draw.textlength(home_team_text, font=team_font))
         team_info_width = max(away_team_width, home_team_width)
         
-        # Odds text
+        # Odds — compute spread and O/U for the right column (non-live games only)
         odds = game.get('odds') or {}
         home_team_odds = odds.get('home_team_odds', {})
         away_team_odds = odds.get('away_team_odds', {})
-        
-        # Determine the favorite and get the spread
+
         home_spread = home_team_odds.get('spread_odds')
         away_spread = away_team_odds.get('spread_odds')
-        
+
         # Fallback to top-level spread from odds_manager
         top_level_spread = odds.get('spread')
         if top_level_spread is not None:
@@ -1937,121 +1950,39 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
             if away_spread is None:
                 away_spread = -top_level_spread
 
-        # Check for valid spread values before comparing
         home_favored = isinstance(home_spread, (int, float)) and home_spread < 0
         away_favored = isinstance(away_spread, (int, float)) and away_spread < 0
-
         over_under = odds.get('over_under')
-        
-        away_odds_text = ""
-        home_odds_text = ""
-        
-        # For live games, show live status instead of odds
-        if is_live and live_info:
-            sport = None
-            league_key = game.get('league')
-            if league_key and league_key in self.league_configs:
-                sport = self.league_configs[league_key].get('sport')
-            
-            if sport == 'baseball':
-                # Show bases occupied for baseball
-                bases = live_info.get('bases_occupied', [False, False, False])
-                bases_text = ""
-                if bases[0]: bases_text += "1B"
-                if bases[1]: bases_text += "2B"
-                if bases[2]: bases_text += "3B"
-                if not bases_text: bases_text = "Empty"
-                
-                away_odds_text = f"Bases: {bases_text}"
-                home_odds_text = f"Count: {live_info.get('balls', 0)}-{live_info.get('strikes', 0)}"
-                
-            elif sport == 'football':
-                # Show possession and yard line for football
-                possession = live_info.get('possession', '')
-                yard_line = live_info.get('yard_line', 0)
-                
-                away_odds_text = f"Ball: {possession}"
-                home_odds_text = f"Yard: {yard_line}"
-                
-            elif sport == 'basketball':
-                # Scores are already shown in the team column; keep odds column blank
-                away_odds_text = ""
-                home_odds_text = ""
 
-            elif sport == 'hockey':
-                # Hockey: Show power play status and score differential
-                power_play = live_info.get('power_play', False)
-                # Safely convert scores to int (API may return strings)
-                try:
-                    home_score = int(live_info.get('home_score', 0) or 0)
-                except (ValueError, TypeError):
-                    home_score = 0
-                try:
-                    away_score = int(live_info.get('away_score', 0) or 0)
-                except (ValueError, TypeError):
-                    away_score = 0
-                diff = home_score - away_score
-                if diff > 0:
-                    score_text = f"HOME +{diff}"
-                elif diff < 0:
-                    score_text = f"AWAY +{abs(diff)}"
-                else:
-                    score_text = "TIED"
-
-                away_odds_text = "PP" if power_play else score_text
-                home_odds_text = "LIVE"
-                
-            else:
-                # Generic live status
-                away_odds_text = "LIVE"
-                home_odds_text = live_info.get('clock', '')
-        else:
-            # Show odds for non-live games
-            # Simplified odds placement logic
+        # Build right-column rows 3 and 4: spread (favored team + value) and O/U
+        spread_text = ""
+        ou_text = ""
+        if not (is_live and live_info):
             if home_favored:
-                home_odds_text = f"{home_spread}"
-                if over_under:
-                    away_odds_text = f"O/U {over_under}"
+                spread_text = f"{home_team_abbr}{home_spread:+g}"
             elif away_favored:
-                away_odds_text = f"{away_spread}"
-                if over_under:
-                    home_odds_text = f"O/U {over_under}"
-            elif over_under:
-                home_odds_text = f"O/U {over_under}"
-        
-        away_odds_width = int(temp_draw.textlength(away_odds_text, font=odds_font))
-        home_odds_width = int(temp_draw.textlength(home_odds_text, font=odds_font))
-        odds_width = max(away_odds_width, home_odds_width)
-        
-        # For baseball live games, optimize width for graphical bases
-        is_baseball_live = False
-        if is_live and live_info and self._bases_data is not None:
-            sport = None
-            league_key = game.get('league')
-            if league_key and league_key in self.league_configs:
-                sport = self.league_configs[league_key].get('sport')
-            
-            if sport == 'baseball':
-                is_baseball_live = True
-                # Use a more compact width for baseball games to minimize dead space
-                # The bases graphic only needs about 24px width, so we can be more efficient
-                min_bases_width = 24  # Reduced from 30 to minimize dead space
-                odds_width = max(odds_width, min_bases_width)
+                spread_text = f"{away_team_abbr}{away_spread:+g}"
+            if over_under is not None:
+                ou_text = f"O/U {over_under}"
+
+            # Expand right column width to accommodate spread and O/U text
+            spread_w = int(temp_draw.textlength(spread_text, font=odds_font)) if spread_text else 0
+            ou_w = int(temp_draw.textlength(ou_text, font=odds_font)) if ou_text else 0
+            right_col_width = max(right_col_width, spread_w, ou_w)
 
         # --- Calculate total width ---
-        # Start with the sum of all visible components and consistent padding
-        total_width = (logo_size + h_padding + 
-                       vs_width + h_padding + 
+        # Layout: away_logo | vs | home_logo | team_info | right_col | [broadcast_logo]
+        total_width = (logo_size + h_padding +
+                       vs_width + h_padding +
                        logo_size + h_padding +
-                       team_info_width + h_padding + 
-                       odds_width + h_padding + 
-                       datetime_col_width + h_padding) # Always add padding at the end
-        
+                       team_info_width + h_padding +
+                       right_col_width + h_padding)
+
         # Add width for the broadcast logo if it exists
         if broadcast_logo:
-            total_width += broadcast_logo_col_width + h_padding  # Add padding after broadcast logo
-        
-        logger.info(f"Game {game.get('id')}: Total width calculation - logo_size: {logo_size}, vs_width: {vs_width}, team_info_width: {team_info_width}, odds_width: {odds_width}, datetime_col_width: {datetime_col_width}, broadcast_logo_col_width: {broadcast_logo_col_width}, total_width: {total_width}")
+            total_width += broadcast_logo_col_width + h_padding
+
+        logger.info(f"Game {game.get('id')}: Total width - logo_size: {logo_size}, vs_width: {vs_width}, team_info_width: {team_info_width}, right_col_width: {right_col_width}, broadcast_logo_col_width: {broadcast_logo_col_width}, total_width: {total_width}")
 
         # --- Create final image ---
         image = Image.new('RGB', (int(total_width), height), color=(0, 0, 0))
@@ -2062,25 +1993,36 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
 
         # Away Logo
         if away_logo:
-            y_pos = (height - logo_size) // 2  # Center the logo vertically
+            y_pos = (height - logo_size) // 2
             image.paste(away_logo, (current_x, y_pos), away_logo if away_logo.mode == 'RGBA' else None)
+        # Standings number below away logo
+        if away_standing:
+            st_font = datetime_font
+            st_font_h = st_font.size if hasattr(st_font, 'size') else 8
+            st_w = int(temp_draw.textlength(away_standing, font=st_font))
+            st_x = current_x + (logo_size - st_w) // 2
+            st_y = max(0, height - st_font_h - 1)
+            draw.text((st_x, st_y), away_standing, font=st_font, fill=(255, 255, 0))
         current_x += logo_size + h_padding
 
         # "vs."
-        y_pos = (height - vs_font.size) // 2 if hasattr(vs_font, 'size') else (height - 8) // 2 # Added fallback for default font
-        
-        # Use red color for live game "vs." text to make it stand out
-        vs_color = (255, 255, 255)  # White for regular games
-        if is_live and live_info:
-            vs_color = (255, 0, 0)  # Red for live games
-        
+        y_pos = (height - vs_font.size) // 2 if hasattr(vs_font, 'size') else (height - 8) // 2
+        vs_color = (255, 0, 0) if (is_live and live_info) else (255, 255, 255)
         draw.text((current_x, y_pos), vs_text, font=vs_font, fill=vs_color)
         current_x += vs_width + h_padding
 
         # Home Logo
         if home_logo:
-            y_pos = (height - logo_size) // 2  # Center the logo vertically
+            y_pos = (height - logo_size) // 2
             image.paste(home_logo, (current_x, y_pos), home_logo if home_logo.mode == 'RGBA' else None)
+        # Standings number below home logo
+        if home_standing:
+            st_font = datetime_font
+            st_font_h = st_font.size if hasattr(st_font, 'size') else 8
+            st_w = int(temp_draw.textlength(home_standing, font=st_font))
+            st_x = current_x + (logo_size - st_w) // 2
+            st_y = max(0, height - st_font_h - 1)
+            draw.text((st_x, st_y), home_standing, font=st_font, fill=(255, 255, 0))
         current_x += logo_size + h_padding
 
         # Team Info (stacked)
@@ -2097,78 +2039,39 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
         draw.text((current_x, home_y), home_team_text, font=team_font, fill=team_color)
         current_x += team_info_width + h_padding
 
-        # Odds (stacked) - Skip text for baseball live games, draw bases instead
-        odds_font_height = odds_font.size if hasattr(odds_font, 'size') else 8
-        odds_y_away = 2
-        odds_y_home = height - odds_font_height - 2
-        
-        # Use a consistent color for all odds text
-        odds_color = (0, 255, 0) # Green
-        
-        # Use red color for live game information to make it stand out
+        # Right column — 3 rows for live games, 4 rows for non-live games
+        # Live:     row1=status  row2=game_state  row3=clock
+        # Non-live: row1=date   row2=time         row3=spread  row4=O/U
+        rc_font_h = datetime_font.size if hasattr(datetime_font, 'size') else 8
+
         if is_live and live_info:
-            odds_color = (255, 0, 0)  # Red for live games
-
-        # Draw odds content based on game type
-        if is_baseball_live:
-            # Draw graphical bases instead of text
-            # Position bases closer to team names (left side of odds column) for better spacing
-            bases_x = current_x + 12  # Position at left side, offset by half cluster width (24/2 = 12)
-            # Shift bases down a bit more for better positioning
-            bases_y = (height // 2) + 2  # Move down 2 pixels from center
-            
-            # Ensure the bases don't go off the edge of the image
-            base_diamond_size = 8  # Total size of the diamond
-            base_cluster_width = 24  # Width of the base cluster (8 + 8 + 8) with tighter spacing
-            if bases_x - (base_cluster_width // 2) >= 0 and bases_x + (base_cluster_width // 2) <= image.width:
-                # Draw the base indicators
-                self._draw_base_indicators(draw, self._bases_data, bases_x, bases_y)
-            
-            # Clear the bases data after drawing
-            self._bases_data = None
+            rc_rows = [
+                (day_text,  datetime_font, (255, 0, 0)),
+                (date_text, datetime_font, (255, 0, 0)),
+                (time_text, datetime_font, (255, 0, 0)),
+            ]
         else:
-            # Draw regular odds text for non-baseball games
-            draw.text((current_x, odds_y_away), away_odds_text, font=odds_font, fill=odds_color)
-            draw.text((current_x, odds_y_home), home_odds_text, font=odds_font, fill=odds_color)
-        
-        # Dynamic spacing: Use reduced padding for baseball games to minimize dead space
-        if is_baseball_live:
-            # Use minimal padding since bases are positioned at left of column
-            current_x += odds_width + (h_padding // 3)  # Use 1/3 padding for baseball games
-        else:
-            current_x += odds_width + h_padding
-        
-        # Datetime (stacked, 3 rows) - Center justified
-        datetime_font_height = datetime_font.size if hasattr(datetime_font, 'size') else 6
-        
-        # Calculate available height for the three text lines
-        total_text_height = (3 * datetime_font_height) + 4 # 2px padding between lines
-        
-        # Center the block of text vertically
-        dt_start_y = (height - total_text_height) // 2
+            rc_rows = [
+                (day_text,    datetime_font, (255, 255, 255)),
+                (date_text,   datetime_font, (255, 255, 255)),
+                (spread_text, odds_font,     (0, 255, 0)),
+                (ou_text,     odds_font,     (0, 255, 0)),
+            ]
 
-        day_y = dt_start_y
-        date_y = day_y + datetime_font_height + 2
-        time_y = date_y + datetime_font_height + 2
+        n_rows = len(rc_rows)
+        # Cap gap at 2px so 4 rows fit on 32px displays (4*8=32 → gap=0)
+        gap = min(2, max(0, (height - n_rows * rc_font_h) // max(n_rows - 1, 1)))
+        total_block_h = n_rows * rc_font_h + (n_rows - 1) * gap
+        rc_y = (height - total_block_h) // 2
 
-        # Center justify each line of text within the datetime column
-        day_text_width = int(temp_draw.textlength(day_text, font=datetime_font))
-        date_text_width = int(temp_draw.textlength(date_text, font=datetime_font))
-        time_text_width = int(temp_draw.textlength(time_text, font=datetime_font))
+        for text, font, color in rc_rows:
+            if text:
+                tw = int(temp_draw.textlength(text, font=font))
+                tx = current_x + (right_col_width - tw) // 2
+                draw.text((tx, rc_y), text, font=font, fill=color)
+            rc_y += rc_font_h + gap
 
-        day_x = current_x + (datetime_col_width - day_text_width) // 2
-        date_x = current_x + (datetime_col_width - date_text_width) // 2
-        time_x = current_x + (datetime_col_width - time_text_width) // 2
-
-        # Use red color for live game information to make it stand out
-        datetime_color = (255, 255, 255)  # White for regular date/time
-        if is_live and live_info:
-            datetime_color = (255, 0, 0)  # Red for live games
-
-        draw.text((day_x, day_y), day_text, font=datetime_font, fill=datetime_color)
-        draw.text((date_x, date_y), date_text, font=datetime_font, fill=datetime_color)
-        draw.text((time_x, time_y), time_text, font=datetime_font, fill=datetime_color)
-        current_x += datetime_col_width + h_padding # Add padding after datetime
+        current_x += right_col_width + h_padding
 
         if broadcast_logo:
             # Position the broadcast logo in its own column
