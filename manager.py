@@ -2039,10 +2039,10 @@ class VegasSportsTickerPlugin(BasePlugin, BaseOddsManager):
         ti_y = (height - ti_block_h) // 2
 
         if is_live and live_info:
-            name_color   = (255, 0, 0)
-            record_color = (255, 0, 0)
+            name_color   = (255, 0, 0)      # Red for live team names
+            record_color = (255, 255, 255)  # White for live scores
         else:
-            name_color   = (0, 128, 255)   # Blue for team names
+            name_color   = (0, 128, 255)    # Blue for team names
             record_color = (255, 255, 255)  # White for records
 
         for text, color in [
