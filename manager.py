@@ -1903,8 +1903,10 @@ class VegasSportsTickerPlugin(BasePlugin, BaseOddsManager):
             if home_team_abbr in rankings and rankings[home_team_abbr] > 0:
                 home_team_name = f"{rankings[home_team_abbr]}. {home_team_name}"
         
-        away_team_text = f"{away_team_name} ({game.get('away_record', '') or 'N/A'})"
-        home_team_text = f"{home_team_name} ({game.get('home_record', '') or 'N/A'})"
+        away_team_name_text = away_team_name
+        away_team_record_text = game.get('away_record', '') or 'N/A'
+        home_team_name_text = home_team_name
+        home_team_record_text = game.get('home_record', '') or 'N/A'
 
         # Standings/ranking text displayed below each team logo (toggleable)
         away_standing = ""
@@ -1927,12 +1929,15 @@ class VegasSportsTickerPlugin(BasePlugin, BaseOddsManager):
         if is_live and live_info:
             away_score = live_info.get('away_score', 0)
             home_score = live_info.get('home_score', 0)
-            away_team_text = f"{away_team_name}:{away_score} "
-            home_team_text = f"{home_team_name}:{home_score} "
-        
-        away_team_width = int(temp_draw.textlength(away_team_text, font=team_font))
-        home_team_width = int(temp_draw.textlength(home_team_text, font=team_font))
-        team_info_width = max(away_team_width, home_team_width)
+            away_team_record_text = str(away_score)
+            home_team_record_text = str(home_score)
+
+        team_info_width = max(
+            int(temp_draw.textlength(away_team_name_text,   font=team_font)),
+            int(temp_draw.textlength(away_team_record_text, font=team_font)),
+            int(temp_draw.textlength(home_team_name_text,   font=team_font)),
+            int(temp_draw.textlength(home_team_record_text, font=team_font)),
+        )
         
         # Odds — compute spread and O/U for the right column (non-live games only)
         odds = game.get('odds') or {}
@@ -2025,18 +2030,30 @@ class VegasSportsTickerPlugin(BasePlugin, BaseOddsManager):
             draw.text((st_x, st_y), home_standing, font=st_font, fill=(255, 255, 0))
         current_x += logo_size + h_padding
 
-        # Team Info (stacked)
-        team_font_height = team_font.size if hasattr(team_font, 'size') else 8
-        away_y = 2
-        home_y = height - team_font_height - 2
-        
-        # Use red color for live game scores to make them stand out
-        team_color = (255, 255, 255)  # White for regular team info
+        # Team Info — 4 rows: away name / away record / home name / home record
+        # Names drawn in blue, records in white; all red for live games
+        team_font_h = team_font.size if hasattr(team_font, 'size') else 8
+        ti_rows = 4
+        ti_gap = min(1, max(0, (height - ti_rows * team_font_h) // max(ti_rows - 1, 1)))
+        ti_block_h = ti_rows * team_font_h + (ti_rows - 1) * ti_gap
+        ti_y = (height - ti_block_h) // 2
+
         if is_live and live_info:
-            team_color = (255, 0, 0)  # Red for live games
-        
-        draw.text((current_x, away_y), away_team_text, font=team_font, fill=team_color)
-        draw.text((current_x, home_y), home_team_text, font=team_font, fill=team_color)
+            name_color   = (255, 0, 0)
+            record_color = (255, 0, 0)
+        else:
+            name_color   = (0, 128, 255)   # Blue for team names
+            record_color = (255, 255, 255)  # White for records
+
+        for text, color in [
+            (away_team_name_text,   name_color),
+            (away_team_record_text, record_color),
+            (home_team_name_text,   name_color),
+            (home_team_record_text, record_color),
+        ]:
+            draw.text((current_x, ti_y), text, font=team_font, fill=color)
+            ti_y += team_font_h + ti_gap
+
         current_x += team_info_width + h_padding
 
         # Right column — 3 rows for live games, 4 rows for non-live games
