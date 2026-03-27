@@ -1,5 +1,5 @@
 """
-Shane Ticker Plugin for LEDMatrix
+Vegas Sports Ticker Plugin for LEDMatrix
 
 Displays scrolling odds and betting lines for upcoming games across multiple sports leagues.
 Shows point spreads, money lines, and over/under totals with team information.
@@ -100,8 +100,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
-    """Shane Ticker — scrolling sports odds and live score display for multiple sports leagues."""
+class VegasSportsTickerPlugin(BasePlugin, BaseOddsManager):
+    """Vegas Sports Ticker — scrolling sports odds and live score display for multiple sports leagues."""
     
     BROADCAST_LOGO_MAP = {
         "ACC Network": "accn",
@@ -153,7 +153,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
     
     def __init__(self, plugin_id: str, config: Dict[str, Any],
                  display_manager, cache_manager, plugin_manager):
-        """Initialize the Shane Ticker plugin with exact original functionality."""
+        """Initialize the Vegas Sports Ticker plugin with exact original functionality."""
         # Initialize BasePlugin first
         super().__init__(plugin_id, config, display_manager, cache_manager, plugin_manager)
         
@@ -170,7 +170,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
             return
 
         # Configuration - exactly like original
-        # The config parameter already contains the shaneticker configuration directly
+        # The config parameter already contains the vegassportsticker configuration directly
         self.plugin_config = config
         self.is_enabled = self.plugin_config.get('enabled', False)
 
@@ -527,7 +527,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
             if league_cfg.get('enabled', False)
         ]
 
-        logger.info(f"ShaneTickerManager initialized with enabled leagues: {self.enabled_leagues}")
+        logger.info(f"VegasSportsTickerManager initialized with enabled leagues: {self.enabled_leagues}")
         logger.info(f"Show favorite teams only: {self.show_favorite_teams_only}")
         self.initialized = True
 
@@ -912,7 +912,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
         now = datetime.now(timezone.utc)
         
         if not self.enabled_leagues:
-            logger.warning("No enabled leagues configured for Shane Ticker")
+            logger.warning("No enabled leagues configured for Vegas Sports Ticker")
             return games_data
         
         logger.info(f"Fetching upcoming games for {len(self.enabled_leagues)} enabled leagues: {self.enabled_leagues}")
@@ -1519,7 +1519,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
                 
             elif sport == 'football':
                 quarter_text = f"Q{live_info.get('quarter', 1)}"
-                # Validate down and distance for Shane Ticker display
+                # Validate down and distance for Vegas Sports Ticker display
                 down = live_info.get('down')
                 distance = live_info.get('distance')
                 if (down is not None and isinstance(down, int) and 1 <= down <= 4 and 
@@ -1801,7 +1801,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
             elif sport == 'football':
                 # Football: Show quarter and down/distance
                 quarter_text = f"Q{live_info.get('quarter', 1)}"
-                # Validate down and distance for Shane Ticker display
+                # Validate down and distance for Vegas Sports Ticker display
                 down = live_info.get('down')
                 distance = live_info.get('distance')
                 if (down is not None and isinstance(down, int) and 1 <= down <= 4 and 
@@ -2195,7 +2195,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
                         self._create_ticker_image()
                         logger.debug(f"Force update completed, total_scroll_width: {self.total_scroll_width}px")
                 except Exception as e:
-                    logger.exception(f"Error updating Shane Ticker for dynamic duration: {e}")
+                    logger.exception(f"Error updating Vegas Sports Ticker for dynamic duration: {e}")
 
         # Cache the duration
         self._cached_dynamic_duration = self.dynamic_duration
@@ -2290,7 +2290,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
 
         if old_enabled != new_enabled:
             self.logger.info(
-                "Dynamic duration %s for shaneticker plugin",
+                "Dynamic duration %s for vegassportsticker plugin",
                 "enabled" if new_enabled else "disabled"
             )
 
@@ -2367,7 +2367,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
             self.logger.info(f"Show channel logos updated to: {self.show_channel_logos}")
 
     def update(self):
-        """Update Shane Ticker data."""
+        """Update Vegas Sports Ticker data."""
         logger.debug("Entering update method")
         if not self.is_enabled:
             logger.debug("Odds ticker is disabled, skipping update")
@@ -2521,7 +2521,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
                 self.show_odds_only = filtering.get('show_odds_only', self.plugin_config.get('show_odds_only', False))
                 self.loop = display_options.get('loop', self.plugin_config.get('loop', True))
 
-                logger.debug("Updating Shane Ticker data")
+                logger.debug("Updating Vegas Sports Ticker data")
                 logger.debug(f"Enabled leagues: {self.enabled_leagues}")
                 logger.debug(f"Show favorite teams only: {self.show_favorite_teams_only}")
                 logger.debug(f"Show odds only: {self.show_odds_only}")
@@ -2557,19 +2557,19 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
                 next_interval = self._get_current_update_interval()
                 if self.games_data:
                     live_count = sum(1 for game in self.games_data if game.get('status_state') == 'in')
-                    logger.info(f"Updated Shane Ticker with {len(self.games_data)} games ({live_count} live). Next update in {next_interval}s")
+                    logger.info(f"Updated Vegas Sports Ticker with {len(self.games_data)} games ({live_count} live). Next update in {next_interval}s")
                     for i, game in enumerate(self.games_data[:3]):  # Log first 3 games
                         status = "LIVE" if game.get('status_state') == 'in' else game.get('status', 'scheduled')
                         logger.info(f"Game {i+1}: {game['away_team']} @ {game['home_team']} - {status}")
                 else:
-                    logger.warning("No games found for Shane Ticker")
+                    logger.warning("No games found for Vegas Sports Ticker")
 
             except Exception as e:
-                logger.error(f"Error updating Shane Ticker: {e}", exc_info=True)
+                logger.error(f"Error updating Vegas Sports Ticker: {e}", exc_info=True)
                 logger.warning(f"Odds ticker update failed, games_data may be empty: {e}")
 
     def display(self, display_mode: str = None, force_clear: bool = False):
-        """Display the Shane Ticker."""
+        """Display the Vegas Sports Ticker."""
         logger.debug("Entering display method")
         logger.debug(f"Odds ticker enabled: {self.is_enabled}")
         logger.debug(f"Current scroll position: {self.scroll_helper.scroll_position}")
@@ -2742,7 +2742,7 @@ class ShaneTickerPlugin(BasePlugin, BaseOddsManager):
             self.scroll_helper.log_frame_rate()
             
         except Exception as e:
-            logger.error(f"Error displaying Shane Ticker: {e}", exc_info=True)
+            logger.error(f"Error displaying Vegas Sports Ticker: {e}", exc_info=True)
             self._display_fallback_message()
 
     def _display_fallback_message(self):

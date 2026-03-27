@@ -1,11 +1,11 @@
 {
-  "id": "shaneticker",
-  "name": "Shane Ticker",
+  "id": "vegassportsticker",
+  "name": "Vegas Sports Ticker",
   "version": "1.4.0-beta",
   "description": "Displays scrolling odds and betting lines for upcoming games across multiple sports leagues including NFL, NBA, MLB, NCAA Football, and more",
   "author": "sarjent",
   "category": "sports",
-  "tags": ["odds", "betting", "ticker", "sports", "nfl", "nba", "mlb", "ncaa", "scrolling"],
+  "tags": ["odds", "betting", "vegas", "sports", "nfl", "nba", "mlb", "ncaa", "scrolling"],
   "repo": "https://github.com/sarjent/ledmatrix-shaneticker",
   "branch": "main",
   "plugin_path": "",
@@ -52,9 +52,9 @@
   "verified": true,
   "screenshot": "",
   "display_modes": [
-    "shaneticker"
+    "vegassportsticker"
   ],
-  "class_name": "ShaneTickerPlugin",
+  "class_name": "VegasSportsTickerPlugin",
   "dependencies": {
     "managers": []
   }
